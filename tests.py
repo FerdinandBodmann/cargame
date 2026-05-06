@@ -12,7 +12,7 @@ pro7 = "|------>---|"
 pro8 = "|------->--|"
 pro9 = "|-------->-|"
 pro10 = "|--------->|"
-continue_drive = "ja/nein", "weiterfahren?"
+continue_drive = "ja/nein | weiterfahren? "
 print(commands)
 command = input()
 if command == "start":
@@ -68,13 +68,13 @@ if command == "start":
                                             status = 1
                                             progress = 10
                                             print(pro10)
-                                            print("Du bist am Ziel.")
     if drive == "nein":
         status = 0
-        command = input(commands)
+        print(commands)
+        command = input()
 if command == "stop" and status == 1:
     status = 0
 if command == "stop" and status == 0:
     print("steht bereits")
-if command == "exit" and status == 1 or status == 0:
+if command == "exit":
     exit
