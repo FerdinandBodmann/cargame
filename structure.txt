@@ -1,3 +1,4 @@
+Progress-Bars:
 pro1 = "|>---------|"
 pro2 = "|->--------|"
 pro3 = "|-->-------|"
@@ -8,3 +9,14 @@ pro7 = "|------>---|"
 pro8 = "|------->--|"
 pro9 = "|-------->-|"
 pro10 = "|--------->|"
+Progress-checkers:
+drive1 = input()
+drive2 = input()
+drive3 = input()
+drive4 = input()
+drive5 = input()
+drive6 = input()
+drive7 = input()
+drive8 = input()
+drive9 = input()
+drive10 = input()
