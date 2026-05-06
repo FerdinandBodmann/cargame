@@ -40,6 +40,7 @@ while True:
             print(progress_bars[progress - 1])
             if progress < 10:
                 drive = input("ja/nein | weiterfahren? ")
+        status = 0
 
     elif command == "stop":
         if status == 0:
