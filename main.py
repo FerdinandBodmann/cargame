@@ -18,6 +18,5 @@ if command == "stop" and status == 1:
     status = 0
 if command == "stop" and status == 0:
     print("steht bereits")
-    
 if command == "exit" and status == 1 or status == 0:
     exit
