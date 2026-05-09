@@ -1,0 +1,15 @@
+New Feature Ideas
+=================
+
+- Speed control — slider or up/down arrows to set speed instead of binary yes/no
+- Fuel bar — a second bar that depletes as you drive, need to "refuel" sometimes
+- Obstacles — random "hazard" prompts during driving ("Hindernis! Ausweichen?")
+- Score / streak counter — track how far you got without stopping
+- Reset button — reset progress without closing the window
+- Keyboard shortcuts — Enter for Yes, Escape for No, S for Start, X for Exit
+- Sound effects — simple beeps on step / done / error
+- History export — save the terminal log to a file
+- Custom step count — let user set max steps (not hardcoded 10)
+- Auto-drive mode — checkbox to skip prompts and just run through
+- Dark/light theme toggle
+- Progress bar color changes — green → yellow → red as you go faster
