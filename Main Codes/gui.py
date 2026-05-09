@@ -134,7 +134,7 @@ class App:
 
         self.on_speed_change()
         root.update()
-        w = root.winfo_reqwidth() + 40
+        w = root.winfo_reqwidth() + 60
         h = root.winfo_reqheight() + 20
         root.minsize(w, h)
         root.geometry(f"{w}x{h}")
