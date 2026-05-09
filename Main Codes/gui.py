@@ -11,6 +11,8 @@ class App:
         self._p = 0
         self.streak = 0
         self.done = False
+        self.fuel = 100
+        self.max_fuel = 100
 
         root.title("drive")
         root.configure(bg="#0d0d0d")
@@ -28,6 +30,8 @@ class App:
         style.map("TButton", background=[("active", "#2a2a2a")])
         style.configure("TScale", background="#0d0d0d", troughcolor="#1a1a1a",
                         slidercolor="#4ec9b0")
+        style.configure("Fuel.Horizontal.TProgressbar",
+                        background="#f0a030", troughcolor="#1a1a1a", bordercolor="#1a1a1a")
 
         main = ttk.Frame(root, padding=28)
         main.pack()
@@ -55,6 +59,14 @@ class App:
                             font=("Arial", 11), foreground="#666", width=7)
         self.pct.pack(pady=(6, 0))
 
+        self.fuel_bar = ttk.Progressbar(bar_tile, length=100, mode="determinate",
+                                        maximum=self.max_fuel,
+                                        style="Fuel.Horizontal.TProgressbar")
+        self.fuel_bar.pack(pady=(4, 0))
+        self.fuel_lbl = ttk.Label(bar_tile, text="fuel: 100",
+                                  font=("Arial", 9), foreground="#f0a030")
+        self.fuel_lbl.pack()
+
         self.streak_lbl = ttk.Label(bar_tile, text="streak: 0",
                                     font=("Arial", 9), foreground="#555")
         self.streak_lbl.pack()
@@ -70,7 +82,7 @@ class App:
                                 bg="#151515")
         self.kmh_lbl.pack(pady=(10, 5))
 
-        self.risk_lbl = tk.Label(speed_tile, text="risk: 0%",
+        self.risk_lbl = tk.Label(speed_tile, text="risk: 0%  |  +1/go",
                                  font=("Arial", 10), fg="#555",
                                  bg="#151515")
         self.risk_lbl.pack()
@@ -92,10 +104,6 @@ class App:
                                 highlightthickness=1, highlightbackground="#333",
                                 state="disabled")
         self.go_btn.pack(pady=(4, 6))
-
-        info = tk.Label(speed_tile, text="",
-                        font=("Arial", 9), fg="#444", bg="#151515")
-        info.pack()
 
         # -- Terminal tile --
         term_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222",
@@ -126,13 +134,10 @@ class App:
 
         self.on_speed_change()
         root.update()
-        w = root.winfo_reqwidth() + 20
+        w = root.winfo_reqwidth() + 40
         h = root.winfo_reqheight() + 20
         root.minsize(w, h)
         root.geometry(f"{w}x{h}")
-
-    def speed_risk(self, s):
-        return (s - 1) * 5
 
     def speed_progress(self, s):
         if s <= 2:
@@ -146,6 +151,9 @@ class App:
         else:
             return 5, 50
 
+    def speed_fuel_cost(self, s):
+        return s * 2
+
     def speed_color(self, s):
         if s <= 3:
             return "#4ec9b0"
@@ -158,9 +166,10 @@ class App:
         s = int(self.speed_val.get())
         kmh = s * 10
         steps, risk = self.speed_progress(s)
+        cost = self.speed_fuel_cost(s)
         c = self.speed_color(s)
         self.kmh_lbl.config(text=f"{kmh} km/h", fg=c)
-        self.risk_lbl.config(text=f"risk: {risk}%  |  +{steps}/go", fg=c)
+        self.risk_lbl.config(text=f"risk: {risk}%  |  +{steps}/go  |  -{cost} fuel", fg=c)
 
     def update_bar(self):
         max_h = 200
@@ -172,9 +181,12 @@ class App:
         self.canvas.coords(self.bar, 0, y, 36, max_h)
 
     def crash_bar(self):
-        max_h = 200
         self.canvas.itemconfig(self.bar, fill="#ff4444")
-        self.canvas.coords(self.bar, 0, max_h, 36, max_h)
+        self.canvas.coords(self.bar, 0, 200, 36, 200)
+
+    def update_fuel(self):
+        self.fuel_bar["value"] = self.fuel
+        self.fuel_lbl.config(text=f"fuel: {self.fuel}")
 
     def log(self, msg, color="#ccc"):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -193,17 +205,28 @@ class App:
         self._p = 0
         self.done = False
         self.streak = 0
+        self.fuel = self.max_fuel
         self.streak_lbl.config(text="streak: 0")
         self.go_btn.config(state="normal", fg=self.speed_color(int(self.speed_val.get())))
         self.pct.config(text="0 / 10")
-        self.log("driving", "#4ec9b0")
+        self.update_fuel()
+        self.log("driving — tank full", "#4ec9b0")
         self.update_bar()
 
     def on_go(self):
         if self.s != 1 or self.done:
             return
+
+        if self.fuel <= 0:
+            self.s = 0
+            self.done = True
+            self.go_btn.config(state="disabled", fg="#555")
+            self.log("out of fuel! press Start to refuel", "#f0a030")
+            return
+
         s = int(self.speed_val.get())
         steps, risk = self.speed_progress(s)
+        cost = self.speed_fuel_cost(s)
         c = self.speed_color(s)
 
         if risk > 0 and random.randint(1, 100) <= risk:
@@ -213,8 +236,11 @@ class App:
             self.crash_bar()
             self.pct.config(text="💥")
             self.log(f"CRASH! Engine blew at {s*10} km/h", "#ff4444")
-            self.log(f"car is broken — press Start to repair", "#ff4444")
+            self.log("press Start to repair", "#ff4444")
             return
+
+        self.fuel = max(self.fuel - cost, 0)
+        self.update_fuel()
 
         old = self._p
         self._p = min(self._p + steps, 10)
@@ -222,12 +248,20 @@ class App:
         self.streak_lbl.config(text=f"streak: {self.streak}")
         self.pct.config(text=f"{self._p} / 10")
         self.update_bar()
-        self.log(f"step {self._p}  ({s*10} km/h, +{steps})", c)
+        self.log(f"step {self._p}  ({s*10} km/h, -{cost} fuel)", c)
+
+        if self.fuel <= 0:
+            self.s = 0
+            self.done = True
+            self.go_btn.config(state="disabled", fg="#555")
+            self.log("out of fuel! press Start to refuel", "#f0a030")
+            return
+
         if self._p >= 10:
             self.s = 0
             self.done = True
             self.go_btn.config(state="disabled", fg="#555")
-            self.log("🏆 FINISH!", "#4ec9b0")
+            self.log("FINISH!", "#4ec9b0")
 
     def stop(self):
         if self.done:
