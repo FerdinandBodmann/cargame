@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
+import random
 
 
 class App:
@@ -8,6 +9,8 @@ class App:
         self.root = root
         self.s = 0
         self._p = 0
+        self.streak = 0
+        self.done = False
 
         root.title("drive")
         root.configure(bg="#0d0d0d")
@@ -23,8 +26,8 @@ class App:
                         bordercolor="#333", lightcolor="#1a1a1a", darkcolor="#1a1a1a",
                         focuscolor="#0d0d0d", padding=(16, 6))
         style.map("TButton", background=[("active", "#2a2a2a")])
-        style.configure("Green.Vertical.TProgressbar",
-                        background="#4ec9b0", troughcolor="#1a1a1a", bordercolor="#1a1a1a")
+        style.configure("TScale", background="#0d0d0d", troughcolor="#1a1a1a",
+                        slidercolor="#4ec9b0")
 
         main = ttk.Frame(root, padding=28)
         main.pack()
@@ -37,21 +40,69 @@ class App:
         mid = ttk.Frame(main)
         mid.pack(fill="x")
 
-        bar_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222", highlightthickness=1, padx=24, pady=20)
+        # -- Progress tile --
+        bar_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222",
+                           highlightthickness=1, padx=24, pady=20)
         bar_tile.pack(side=tk.LEFT, padx=(0, 8))
 
-        self.progress = ttk.Progressbar(bar_tile, length=180, mode="determinate",
-                                        maximum=10, orient="vertical",
-                                        style="Green.Vertical.TProgressbar")
-        self.progress.pack()
+        self.canvas = tk.Canvas(bar_tile, width=36, height=200,
+                                bg="#111", highlightthickness=0)
+        self.canvas.pack()
+        self.bar = self.canvas.create_rectangle(0, 200, 36, 200,
+                                                fill="#4ec9b0", width=0)
+
         self.pct = ttk.Label(bar_tile, text="0 / 10",
                             font=("Arial", 11), foreground="#666", width=7)
-        self.pct.pack(pady=(8, 0))
+        self.pct.pack(pady=(6, 0))
 
-        term_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222", highlightthickness=1, padx=0, pady=0)
-        term_tile.pack(side=tk.LEFT, padx=4, fill="both", expand=True)
+        self.streak_lbl = ttk.Label(bar_tile, text="streak: 0",
+                                    font=("Arial", 9), foreground="#555")
+        self.streak_lbl.pack()
 
-        self.term = tk.Text(term_tile, width=38, height=10,
+        # -- Speed tile --
+        speed_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222",
+                              highlightthickness=1, padx=24, pady=20)
+        speed_tile.pack(side=tk.LEFT, padx=4, fill="both", expand=True)
+
+        self.speed_val = tk.DoubleVar(value=1)
+        self.kmh_lbl = tk.Label(speed_tile, text="10 km/h",
+                                font=("Arial", 24, "bold"), fg="#4ec9b0",
+                                bg="#151515")
+        self.kmh_lbl.pack(pady=(10, 5))
+
+        self.risk_lbl = tk.Label(speed_tile, text="risk: 0%",
+                                 font=("Arial", 10), fg="#555",
+                                 bg="#151515")
+        self.risk_lbl.pack()
+
+        self.slider = tk.Scale(speed_tile, from_=1, to=10,
+                               orient="horizontal", length=160,
+                               variable=self.speed_val, showvalue=False,
+                               bg="#151515", fg="#ccc", troughcolor="#222",
+                               highlightthickness=0, bd=0,
+                               activebackground="#4ec9b0",
+                               sliderrelief="flat", sliderlength=24,
+                               command=self.on_speed_change)
+        self.slider.pack(pady=(4, 10))
+
+        self.go_btn = tk.Button(speed_tile, text="Go", command=self.on_go,
+                                width=12, bg="#1a1a1a", fg="#4ec9b0", bd=0,
+                                activebackground="#2a2a2a", activeforeground="#4ec9b0",
+                                font=("Arial", 12, "bold"), cursor="hand2",
+                                highlightthickness=1, highlightbackground="#333",
+                                state="disabled")
+        self.go_btn.pack(pady=(4, 6))
+
+        info = tk.Label(speed_tile, text="",
+                        font=("Arial", 9), fg="#444", bg="#151515")
+        info.pack()
+
+        # -- Terminal tile --
+        term_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222",
+                             highlightthickness=1, padx=0, pady=0)
+        term_tile.pack(side=tk.LEFT, padx=(8, 0), fill="both", expand=True)
+
+        self.term = tk.Text(term_tile, width=34, height=10,
                            bg="#0d0d0d", fg="#ccc",
                            font=("Consolas", 10),
                            bd=0, highlightthickness=0,
@@ -63,33 +114,6 @@ class App:
         self.term.config(yscrollcommand=scroll.set)
         self.log("idle", "#555")
 
-        prompt_tile = tk.Frame(mid, bg="#151515", highlightbackground="#222", highlightthickness=1, padx=20, pady=20)
-        prompt_tile.pack(side=tk.LEFT, padx=(8, 0))
-
-        self.prompt_lbl = tk.Label(prompt_tile, text="waiting",
-                                   font=("Arial", 11), fg="#555",
-                                   bg="#151515")
-        self.prompt_lbl.pack()
-
-        pf = tk.Frame(prompt_tile, bg="#151515")
-        pf.pack(pady=(10, 0))
-        self.yes_btn = tk.Button(pf, text="Yes", command=self.on_yes, width=8,
-                                bg="#1a1a1a", fg="#cccccc", bd=0,
-                                activebackground="#2a2a2a", activeforeground="#ccc",
-                                font=("Arial", 10), cursor="hand2",
-                                highlightthickness=1, highlightbackground="#333")
-        self.yes_btn.pack(side=tk.LEFT, padx=3)
-        self.no_btn = tk.Button(pf, text="No", command=self.on_no, width=8,
-                               bg="#1a1a1a", fg="#cccccc", bd=0,
-                               activebackground="#2a2a2a", activeforeground="#ccc",
-                               font=("Arial", 10), cursor="hand2",
-                               highlightthickness=1, highlightbackground="#333")
-        self.no_btn.pack(side=tk.LEFT, padx=3)
-
-        self.prompt_lbl.config(fg="#555", text="waiting")
-        self.yes_btn.config(state="disabled", fg="#555")
-        self.no_btn.config(state="disabled", fg="#555")
-
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=(20, 14))
 
         bf = ttk.Frame(main)
@@ -100,13 +124,57 @@ class App:
         self.stop_btn.pack(side=tk.LEFT, padx=4)
         ttk.Button(bf, text="Exit", command=root.quit, width=10).pack(side=tk.LEFT, padx=4)
 
-        self._cb = None
-
+        self.on_speed_change()
         root.update()
         w = root.winfo_reqwidth() + 20
         h = root.winfo_reqheight() + 20
         root.minsize(w, h)
         root.geometry(f"{w}x{h}")
+
+    def speed_risk(self, s):
+        return (s - 1) * 5
+
+    def speed_progress(self, s):
+        if s <= 2:
+            return 1, 0
+        elif s <= 4:
+            return 2, 5
+        elif s <= 6:
+            return 3, 15
+        elif s <= 8:
+            return 4, 30
+        else:
+            return 5, 50
+
+    def speed_color(self, s):
+        if s <= 3:
+            return "#4ec9b0"
+        elif s <= 6:
+            return "#d4d44a"
+        else:
+            return "#e06c75"
+
+    def on_speed_change(self, _=None):
+        s = int(self.speed_val.get())
+        kmh = s * 10
+        steps, risk = self.speed_progress(s)
+        c = self.speed_color(s)
+        self.kmh_lbl.config(text=f"{kmh} km/h", fg=c)
+        self.risk_lbl.config(text=f"risk: {risk}%  |  +{steps}/go", fg=c)
+
+    def update_bar(self):
+        max_h = 200
+        h = int(max_h * (self._p / 10))
+        y = max_h - h
+        s = int(self.speed_val.get())
+        c = self.speed_color(s)
+        self.canvas.itemconfig(self.bar, fill=c)
+        self.canvas.coords(self.bar, 0, y, 36, max_h)
+
+    def crash_bar(self):
+        max_h = 200
+        self.canvas.itemconfig(self.bar, fill="#ff4444")
+        self.canvas.coords(self.bar, 0, max_h, 36, max_h)
 
     def log(self, msg, color="#ccc"):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -117,78 +185,63 @@ class App:
         self.term.see("end")
         self.term.config(state="disabled")
 
-    def prompt(self, text, cb):
-        self._cb = cb
-        self.prompt_lbl.config(text=text, fg="#cccccc")
-        self.yes_btn.config(state="normal", fg="#cccccc")
-        self.no_btn.config(state="normal", fg="#cccccc")
-
-    def hide_prompt(self):
-        self.prompt_lbl.config(text="waiting", fg="#555")
-        self.yes_btn.config(state="disabled", fg="#555")
-        self.no_btn.config(state="disabled", fg="#555")
-        self._cb = None
-
-    def on_yes(self):
-        if self._cb:
-            cb = self._cb
-            self.hide_prompt()
-            cb(True)
-
-    def on_no(self):
-        if self._cb:
-            cb = self._cb
-            self.hide_prompt()
-            cb(False)
-
     def start(self):
         if self.s == 1:
             self.log("already running", "#e06c75")
             return
-        self.prompt("drive?", self._on_drive)
-
-    def _on_drive(self, yes):
-        if not yes:
-            self.log("idle", "#555")
-            return
         self.s = 1
         self._p = 0
+        self.done = False
+        self.streak = 0
+        self.streak_lbl.config(text="streak: 0")
+        self.go_btn.config(state="normal", fg=self.speed_color(int(self.speed_val.get())))
+        self.pct.config(text="0 / 10")
         self.log("driving", "#4ec9b0")
-        self._step()
+        self.update_bar()
 
-    def _step(self):
-        if self.s != 1:
+    def on_go(self):
+        if self.s != 1 or self.done:
             return
-        self._p += 1
-        self.progress["value"] = self._p
+        s = int(self.speed_val.get())
+        steps, risk = self.speed_progress(s)
+        c = self.speed_color(s)
+
+        if risk > 0 and random.randint(1, 100) <= risk:
+            self.s = 0
+            self.done = True
+            self.go_btn.config(state="disabled", fg="#555")
+            self.crash_bar()
+            self.pct.config(text="💥")
+            self.log(f"CRASH! Engine blew at {s*10} km/h", "#ff4444")
+            self.log(f"car is broken — press Start to repair", "#ff4444")
+            return
+
+        old = self._p
+        self._p = min(self._p + steps, 10)
+        self.streak += self._p - old
+        self.streak_lbl.config(text=f"streak: {self.streak}")
         self.pct.config(text=f"{self._p} / 10")
+        self.update_bar()
+        self.log(f"step {self._p}  ({s*10} km/h, +{steps})", c)
         if self._p >= 10:
             self.s = 0
-            self.progress["value"] = 0
-            self.pct.config(text="0 / 10")
-            self.log("done", "#4ec9b0")
-            return
-        self.prompt("continue?", self._on_cont)
-
-    def _on_cont(self, yes):
-        if yes:
-            self.log(f"step {self._p + 1}", "#4ec9b0")
-            self._step()
-        else:
-            self.s = 0
-            self.progress["value"] = 0
-            self.pct.config(text="0 / 10")
-            self.log("stopped", "#e06c75")
+            self.done = True
+            self.go_btn.config(state="disabled", fg="#555")
+            self.log("🏆 FINISH!", "#4ec9b0")
 
     def stop(self):
+        if self.done:
+            self.log("already done, press Start to go again", "#555")
+            return
         if self.s == 0:
             self.log("already stopped", "#e06c75")
         else:
             self.s = 0
-            self.progress["value"] = 0
+            self.go_btn.config(state="disabled", fg="#555")
+            self._p = 0
             self.pct.config(text="0 / 10")
-            self.log("stopped", "#e06c75")
-            self.hide_prompt()
+            self.canvas.coords(self.bar, 0, 200, 36, 200)
+            self.log(f"stopped (streak: {self.streak})", "#e06c75")
 
 
 if __name__ == "__main__":
