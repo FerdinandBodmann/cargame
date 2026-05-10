@@ -6,9 +6,7 @@
     "upg_tank": 2,
     "upg_armor": 0,
     "upg_turbo": 0
-  }
-}
-{
+  },
   "default": {
     "scraps": 0,
     "best_streak": 0,
