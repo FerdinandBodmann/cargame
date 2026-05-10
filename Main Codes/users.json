@@ -8,3 +8,13 @@
     "upg_turbo": 0
   }
 }
+{
+  "default": {
+    "scraps": 0,
+    "best_streak": 0,
+    "upg_engine": 0,
+    "upg_tank": 0,
+    "upg_armor": 0,
+    "upg_turbo": 0
+  }
+}
